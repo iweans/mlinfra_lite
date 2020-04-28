@@ -9,7 +9,11 @@ class TrainProcessor(Processor):
 
     def __init__(self, config):
         super().__init__(config)
-
+        # ----------------------------------------
+        self._iter_num = 10
+        self._train_labels_path = ''
+        self._validate_labels_path = ''
+        self._test_labels_path = ''
         # ----------------------------------------
         self._estimator = estimator.Estimator(
             model_fn=self._model_fn,
@@ -19,9 +23,23 @@ class TrainProcessor(Processor):
         )
 
     def __call__(self):
+        if not self._validate_labels_path:
+            return self.train()
+        # ----------------------------------------
+        return self.train_and_evaluate()
+
+    def train(self):
         self._estimator.train(
-            input_fn=lambda: self._input_fn()
+            input_fn=lambda: self._input_fn(),
+            max_steps=self._num_iter
         )
+
+    def train_and_evaluate(self):
+        train_spec = estimator.TrainSpec(input_fn=lambda: self._input_fn(),
+                                         max_steps=self._iter_num)
+        eval_spec = estimator.EvalSpec(input_fn=lambda: self._input_fn(),)
+        return estimator.train_and_evaluate(self._estimator,
+                                            train_spec=train_spec, eval_spec=eval_spec)
 
     def _model_fn(self):
         pass
@@ -39,5 +57,4 @@ class TrainProcessor(Processor):
             callback_fn=model.create_dataset,
             num_parallel_calls=num_parallel_calls
         )
-
 
